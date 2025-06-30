@@ -1,0 +1,40 @@
+name: Tor SSH Runner
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Start SSH server and print info
+        run: |
+          sudo apt update
+          sudo apt install openssh-server tor -y
+          
+          echo 'PermitRootLogin yes' | sudo tee -a /etc/ssh/sshd_config
+          echo 'PasswordAuthentication yes' | sudo tee -a /etc/ssh/sshd_config
+          echo 'PermitEmptyPasswords yes' | sudo tee -a /etc/ssh/sshd_config
+          sudo service ssh restart
+
+          echo "root:root" | sudo chpasswd
+
+          sudo mkdir -p /var/lib/tor/hidden_service/
+          echo "HiddenServiceDir /var/lib/tor/hidden_service/" | sudo tee -a /etc/tor/torrc
+          echo "HiddenServicePort 22 127.0.0.1:22" | sudo tee -a /etc/tor/torrc
+
+          sudo systemctl restart tor
+          sleep 10
+          echo "-------------------"
+          sudo cat /var/lib/tor/hidden_service/hostname || echo "در حال آماده‌سازی..."
+          echo "-------------------"
+          
+          echo "✅ Tor SSH is ready!"
+          echo "👉 username: root"
+          echo "👉 password: root"
+
+      - name: Keep alive
+        run: |
+          echo "Keeping VM alive..."
+          while true; do sleep 60; done
+
